@@ -1,16 +1,11 @@
-Mojolicious-Plugin-SimpleSession
+Mojolicious::Plugin::SimpleSession
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+Simple sessions for Mojolicious apps. No configuration, no database, no 
+dependencies. 
 
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
-
+Sessions last one hour, but are 'rejuvinated' each request. Session data is
+stored on disk, in your systems temporary directory. Old data is automatically
+culled.
 
 INSTALLATION
 

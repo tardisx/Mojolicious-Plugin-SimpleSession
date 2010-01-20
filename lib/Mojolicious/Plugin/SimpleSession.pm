@@ -8,45 +8,115 @@ use Digest;
 use Data::Dumper;
 
 sub register {
-    my ($self, $app) = @_;
+    my ( $self, $app ) = @_;
 
     my $stash_key = 'session';
 
-        $app->plugins->add_hook(
+    $app->plugins->add_hook(
         before_dispatch => sub {
-            my ($self, $c) = @_;
+            my ( $self, $c ) = @_;
 
-            warn "BEFORE!";
+            warn "BEFORE DISPATCH\n";
+            warn "--------------\n";
+
+            warn "PROCESSING " . $c->tx->req->url . "\n";
+
             # fetch session from cookie if it exists,
             # check for validity and load the data into
             # the data structure.
-            my $session_data = {};  # XXX 
-            my $cookie_hash_value = time().rand(1).$c->tx->remote_address;
-            my $digester = Digest->new('SHA-1');
-            $digester->add($cookie_hash_value);
-            my $cookie_hash = $digester->hexdigest;
 
-            open my $fh, ">", "/tmp/$cookie_hash.txt";
-            print $fh Data::Dumper->Dump([$session_data], ['$session_data']);
-            close $fh;
-            
-            warn "HASH $cookie_hash_value";
-            $c->stash->{$stash_key => $session_data};
+            # grab session hash from cookie, if we can.
+            my $oldcookies = $c->tx->req->cookies;
+            my $cookie_hash;
+            foreach my $cookie (@$oldcookies) {
+                warn "EXAMING COOKIE " . $cookie->name . "\n";
+                if ( $cookie->name eq 'session' ) {
+                    $cookie_hash = $cookie->value->to_string;
+                    warn "FOUND SESSION COOKIE $cookie_hash\n";
+                    last;
+                }
+            }
+
+            my $session_data = {};
+            if ( $cookie_hash && -e _hash_filename($cookie_hash) ) {
+                warn "READING FROM LCOAL SESSOIN FILE\n";
+                open my $fh, "<", _hash_filename($cookie_hash) || die "$!";
+                my $content = '';
+                while (<$fh>) {
+                    $content .= $_;
+                }
+                close($fh);
+                eval $content;
+                die $@ if $@;
+            }
+
+            # No cookie was given to us, or there was no file for it,
+            # so create it.
+            else {
+                warn "CREATING NEW LCOAL SESSION\n";
+                my $cookie_hash_value
+                    = time() . rand(1) . $c->tx->remote_address;
+                my $digester = Digest->new('SHA-1');
+                $digester->add($cookie_hash_value);
+                my $cookie_hash = $digester->hexdigest;
+
+                my $cookie = Mojo::Cookie::Response->new;
+                $cookie->name('session');
+                $cookie->path('/');
+                $cookie->value($cookie_hash);
+                $c->tx->res->cookies($cookie);
+                warn "CREATING NEW COOKIE $cookie_hash\n";
+
+                # create the disk file to match
+                $session_data->{last_update} = time();
+                _dump_session( _hash_filename($cookie_hash), $session_data );
+            }
+
+            $session_data->{cookie_hash} = $cookie_hash;
+            $c->stash->{$stash_key} = $session_data;
+
         }
     );
 
     $app->plugins->add_hook(
         after_dispatch => sub {
-            my ($self, $c) = @_;
+            my ( $self, $c ) = @_;
 
-            warn "AFTER";
+            warn "AFTER DISPATCH\n";
+            warn "--------------\n";
+
+            warn "PROCESSING " . $c->tx->req->url . "\n";
+
             # update the session data on-disk with the new
             # data from the data structure;
             my $session_data = $c->stash->{$stash_key};
-            # XXX store on disk
+
+            # hash is in session data
+            my $cookie_hash = $session_data->{cookie_hash};
+            delete $session_data->{cookie_hash};
+
+            $session_data->{last_update} = time();
+
+            if ($cookie_hash) {
+                _dump_session( _hash_filename($cookie_hash), $session_data );
+            }
 
         }
     );
+}
+
+sub _dump_session {
+    my ( $filename, $session_data ) = @_;
+    open my $fh, ">", $filename || die "$!";
+    print $fh Data::Dumper->Dump( [$session_data], ['$session_data'] );
+    close $fh || die "$!";
+}
+
+sub _hash_filename {
+    my $hash = shift;
+    warn "EXAMING $hash\n";
+
+    return "/tmp/$hash.txt";
 }
 
 =head1 NAME
@@ -60,7 +130,6 @@ Version 0.01
 =cut
 
 our $VERSION = '0.01';
-
 
 =head1 SYNOPSIS
 
@@ -132,4 +201,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1; # End of Mojolicious::Plugin::SimpleSession
+1;    # End of Mojolicious::Plugin::SimpleSession

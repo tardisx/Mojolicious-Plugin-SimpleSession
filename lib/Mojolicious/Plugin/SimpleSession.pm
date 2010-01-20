@@ -16,11 +16,6 @@ sub register {
         before_dispatch => sub {
             my ( $self, $c ) = @_;
 
-            warn "BEFORE DISPATCH\n";
-            warn "--------------\n";
-
-            warn "PROCESSING " . $c->tx->req->url . "\n";
-
             # fetch session from cookie if it exists,
             # check for validity and load the data into
             # the data structure.
@@ -29,31 +24,27 @@ sub register {
             my $oldcookies = $c->tx->req->cookies;
             my $cookie_hash;
             foreach my $cookie (@$oldcookies) {
-                warn "EXAMING COOKIE " . $cookie->name . "\n";
                 if ( $cookie->name eq 'session' ) {
                     $cookie_hash = $cookie->value->to_string;
-                    warn "FOUND SESSION COOKIE $cookie_hash\n";
                     last;
                 }
             }
 
             my $session_data = {};
             if ( $cookie_hash && -e _hash_filename($cookie_hash) ) {
-                warn "READING FROM LCOAL SESSOIN FILE\n";
-                open my $fh, "<", _hash_filename($cookie_hash) || die "$!";
+                open (my $fh, "<", _hash_filename($cookie_hash)) || die "$!";
                 my $content = '';
                 while (<$fh>) {
                     $content .= $_;
                 }
                 close($fh);
                 eval $content;
-                die $@ if $@;
+                warn $@ if $@;
             }
 
             # No cookie was given to us, or there was no file for it,
             # so create it.
             else {
-                warn "CREATING NEW LCOAL SESSION\n";
                 my $cookie_hash_value
                     = time() . rand(1) . $c->tx->remote_address;
                 my $digester = Digest->new('SHA-1');
@@ -65,7 +56,6 @@ sub register {
                 $cookie->path('/');
                 $cookie->value($cookie_hash);
                 $c->tx->res->cookies($cookie);
-                warn "CREATING NEW COOKIE $cookie_hash\n";
 
                 # create the disk file to match
                 $session_data->{last_update} = time();
@@ -81,11 +71,6 @@ sub register {
     $app->plugins->add_hook(
         after_dispatch => sub {
             my ( $self, $c ) = @_;
-
-            warn "AFTER DISPATCH\n";
-            warn "--------------\n";
-
-            warn "PROCESSING " . $c->tx->req->url . "\n";
 
             # update the session data on-disk with the new
             # data from the data structure;
@@ -105,17 +90,17 @@ sub register {
     );
 }
 
+
+
 sub _dump_session {
     my ( $filename, $session_data ) = @_;
-    open my $fh, ">", $filename || die "$!";
+    open my $fh, ">", $filename;
     print $fh Data::Dumper->Dump( [$session_data], ['$session_data'] );
     close $fh || die "$!";
 }
 
 sub _hash_filename {
     my $hash = shift;
-    warn "EXAMING $hash\n";
-
     return "/tmp/$hash.txt";
 }
 

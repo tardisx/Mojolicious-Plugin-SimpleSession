@@ -1,2 +1,1 @@
 * Automatically clean up old sessions
-* Remove gaping security hole in eval'ing session files.

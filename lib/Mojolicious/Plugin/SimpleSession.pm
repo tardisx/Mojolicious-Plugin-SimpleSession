@@ -11,6 +11,7 @@ use Carp qw/croak/;
 
 my $max_time = 60 * 60;    # 1 hour
 
+
 sub register {
     my ( $self, $app ) = @_;
 
@@ -137,6 +138,16 @@ That's it!
 If you need to be able to control expiry, use a database store, or basically
 do anything more intelligent with your sessions, you probably want to look
 at L<Mojolicious::Plugin::Session>.
+
+=head1 FUNCTIONS
+
+=over 4
+
+=item register
+
+Called by the Mojolicious framework when the plugin is registered.
+
+=back
 
 =head1 AUTHOR
 

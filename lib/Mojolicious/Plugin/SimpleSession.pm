@@ -5,7 +5,7 @@ use strict;
 
 use base 'Mojolicious::Plugin';
 use Digest;
-use Storable qw/store retrieve/;
+use Storable qw/store retrieve freeze/;
 use File::Spec::Functions qw/catfile tmpdir/;
 use Carp qw/croak/;
 
@@ -58,9 +58,11 @@ sub register {
                 $cookie->value($cookie_hash);
                 $c->tx->res->cookies($cookie);
 
-                # create the disk file to match
-                $session_data->{last_update} = time();
+                # Create the disk file to match, and store a checksum in memory
+                # so we can later determine if it has changed.
+                delete $session_data->{_checksum};
                 _dump_session( _hash_filename($cookie_hash), $session_data );
+                $session_data->{_checksum} = _checksum_data($session_data);
             }
 
             $session_data->{cookie_hash} = $cookie_hash;
@@ -73,22 +75,34 @@ sub register {
         after_dispatch => sub {
             my ( $self, $c ) = @_;
 
-            # update the session data on-disk with the new
-            # data from the data structure;
+            # Update the session data on-disk with the new
+            # data from the data structure, if the data structure has
+            # been changed.
             my $session_data = $c->stash->{$stash_key};
 
             # hash is in session data
             my $cookie_hash = $session_data->{cookie_hash};
             delete $session_data->{cookie_hash};
 
-            $session_data->{last_update} = time();
+            my $checksum = $session_data->{_checksum};
+            delete $session_data->{_checksum};
 
-            if ($cookie_hash) {
+            # Only store if we have changed the data.
+            if ($cookie_hash && (_checksum_data($session_data) ne $checksum)) {
+                $session_data->{_checksum} = _checksum_data($session_data);
                 _dump_session( _hash_filename($cookie_hash), $session_data );
             }
 
         }
     );
+}
+
+# Calculate a checksum on some data.
+sub _checksum_data {
+    my $ref = shift;
+    my $digester = Digest->new('SHA-1');
+    $digester->add(freeze($ref));
+    return $digester->hexdigest;
 }
 
 sub _cookie_valid {

@@ -1,4 +1,1 @@
 * Automatically clean up old sessions
-* Only write sessions out to disk when they have changed
-  (how to detect this? keep serialized copy available on has? implement
-   session hash access via tie?)

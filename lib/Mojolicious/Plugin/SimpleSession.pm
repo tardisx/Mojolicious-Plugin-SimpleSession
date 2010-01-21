@@ -145,6 +145,14 @@ If you need to be able to control expiry, use a database store, or basically
 do anything more intelligent with your sessions, you probably want to look
 at L<Mojolicious::Plugin::Session>.
 
+=head1 WARNING
+
+The current implementation opens a gaping security hole, if untrusted users 
+have access to the session files. Because the data in them is eval'd, if bad
+people can write to existing sessions Bad Things could be done.
+
+A proper solution is forthcoming. 
+
 =head1 AUTHOR
 
 Justin Hawkins, C<< <justin at cpan.org> >>

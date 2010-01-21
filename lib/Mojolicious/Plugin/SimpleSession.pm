@@ -127,8 +127,6 @@ our $VERSION = '0.01';
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
-
 In the C<handler> subroutine of your Mojolicious application, add:
 
     $self->plugin('simple_session');

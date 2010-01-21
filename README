@@ -1,11 +1,19 @@
-Mojolicious::Plugin::SimpleSession
-
-Simple sessions for Mojolicious apps. No configuration, no database, no 
-dependencies. 
+Mojolicious::Plugin::SimpleSession is simple sessions for Mojolicious apps. 
+No configuration, no database, no non-core dependencies. 
 
 Sessions last one hour, but are 'rejuvinated' each request. Session data is
 stored on disk, in your systems temporary directory. Old data is automatically
 culled.
+
+In the "handler" subroutine of your Mojolicious application, add:
+
+    $self−>plugin('simple_session');
+
+That’s it!
+
+If you need to be able to control expiry, use a database store, or
+basically do anything more intelligent with your sessions, you probably
+want to look at Mojolicious::Plugin::Session.
 
 INSTALLATION
 

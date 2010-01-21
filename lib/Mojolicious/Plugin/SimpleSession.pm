@@ -110,7 +110,7 @@ sub _cookie_valid {
     return 0 unless ( -e _hash_filename($cookie_hash) );
     return 0
       unless (
-        time() - ( stat( _hash_filename($cookie_hash) ) )[9] <= $max_time );
+        time() - ( stat( _hash_filename($cookie_hash) ) )[8] <= $max_time );
     return 1;
 }
 

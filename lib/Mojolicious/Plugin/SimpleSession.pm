@@ -5,7 +5,7 @@ use strict;
 
 use base 'Mojolicious::Plugin';
 use Digest;
-use Data::Dumper;
+use Storable qw/store retrieve/;
 use File::Spec::Functions qw/catfile tmpdir/;
 use Carp qw/croak/;
 
@@ -36,14 +36,9 @@ sub register {
 
             my $session_data = {};
             if ( _cookie_valid($cookie_hash) ) {
-                open( my $fh, "<", _hash_filename($cookie_hash) )
-                  || croak "Could not open file: $!";
-                my $content = '';
-                while ( my $line = <$fh> ) {
-                    $content .= $line;
-                }
-                close($fh) || croak "Could not close file: $!";
-                eval $content;
+                eval {
+                    $session_data = retrieve(_hash_filename($cookie_hash));
+                };
                 croak "Could not import session: $@" if $@;
             }
 
@@ -106,17 +101,15 @@ sub _cookie_valid {
 
 sub _dump_session {
     my ( $filename, $session_data ) = @_;
-    my $tmp_filename = $filename . '.tmp';
-    open my $fh, ">", $tmp_filename;
-    print $fh Data::Dumper->Dump( [$session_data], ['$session_data'] );
-    close $fh || croak "Could not close $tmp_filename: $!";
+    my $tmp_filename = $filename . ".tmp.$$";
+    store($session_data, $tmp_filename);
     rename $tmp_filename,
       $filename || croak "Could not rename $tmp_filename: $!";
 }
 
 sub _hash_filename {
     my $hash = shift;
-    return catfile( tmpdir(), "$hash.txt" );
+    return catfile( tmpdir(), "$hash.ses" );
 }
 
 =head1 NAME
@@ -144,14 +137,6 @@ That's it!
 If you need to be able to control expiry, use a database store, or basically
 do anything more intelligent with your sessions, you probably want to look
 at L<Mojolicious::Plugin::Session>.
-
-=head1 WARNING
-
-The current implementation opens a gaping security hole, if untrusted users 
-have access to the session files. Because the data in them is eval'd, if bad
-people can write to existing sessions Bad Things could be done.
-
-A proper solution is forthcoming. 
 
 =head1 AUTHOR
 

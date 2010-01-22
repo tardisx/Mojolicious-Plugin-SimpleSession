@@ -84,15 +84,17 @@ sub register {
             my $cookie_hash = $session_data->{cookie_hash};
             delete $session_data->{cookie_hash};
 
-            my $checksum = $session_data->{_checksum};
+            my $checksum = $session_data->{_checksum} || '';
             delete $session_data->{_checksum};
 
             # Only store if we have changed the data.
             if ($cookie_hash && (_checksum_data($session_data) ne $checksum)) {
                 $session_data->{_checksum} = _checksum_data($session_data);
                 _dump_session( _hash_filename($cookie_hash), $session_data );
-            }
 
+                # And while we are visiting the disk, clean up.
+                _cull_sessions();
+            }
         }
     );
 }
@@ -107,11 +109,26 @@ sub _checksum_data {
 
 sub _cookie_valid {
     my $cookie_hash = shift;
-    return 0 unless ( -e _hash_filename($cookie_hash) );
-    return 0
-      unless (
-        time() - ( stat( _hash_filename($cookie_hash) ) )[8] <= $max_time );
+    my $filename    = _hash_filename($cookie_hash);
+    return 0 unless ( -e $filename );
+    return 0 if ( _too_old( $filename ) );
     return 1;
+}
+
+sub _cull_sessions {
+    my $dir = tmpdir();
+    my $glob_pattern = catfile($dir, "*.ses");
+    foreach my $session_file (glob $glob_pattern) {
+        if (_too_old($session_file)) {
+          unlink $session_file;
+        }
+    }
+}
+
+sub _too_old {
+    my $file = shift;
+    return 1 if ( ( time() - (stat($file))[8] ) > $max_time );
+    return 0;
 }
 
 sub _dump_session {

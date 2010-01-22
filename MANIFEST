@@ -2,6 +2,7 @@ Changes
 MANIFEST
 Makefile.PL
 README
+TODO
 lib/Mojolicious/Plugin/SimpleSession.pm
 t/00-load.t
 t/pod-coverage.t

@@ -7,9 +7,9 @@ culled.
 
 In the "handler" subroutine of your Mojolicious application, add:
 
-    $self−>plugin('simple_session');
+    $self->plugin('simple_session');
 
-That’s it!
+That's it!
 
 Inside your application, you can now reference a hashref called 'session' in
 the stash, like this:

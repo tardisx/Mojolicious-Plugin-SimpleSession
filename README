@@ -11,6 +11,17 @@ In the "handler" subroutine of your Mojolicious application, add:
 
 That’s it!
 
+Inside your application, you can now reference a hashref called 'session' in
+the stash, like this:
+
+    my $count = $self->stash->{session}->{count};
+
+    $count++;
+    $self->stash->{session}->{count} = $count;
+
+Session data is preserved across requests for this user (identified by their
+cookie).
+
 If you need to be able to control expiry, use a database store, or
 basically do anything more intelligent with your sessions, you probably
 want to look at Mojolicious::Plugin::Session.
